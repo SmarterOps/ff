@@ -2,25 +2,131 @@
 
 set -euo pipefail
 
+VERSION="1.1.0"
+
 show_help() {
-  cat << 'HELP'
+  cat <<'HELP'
 ff - Fast File and Directory Creator
 
 Usage:
-  ff <path> [path2 ...]
+  ff [options] <path> [path2 ...]
+  ff --dir <path>
+  ff --file <path>
+  ff --no-color <path>
   ff -h | --help
+  ff -V | --version
+
+Options:
+  --dir        Force the next argument to be treated as a directory.
+  --file       Force the next argument to be treated as a file.
+  --no-color   Disable colored output.
+  -h, --help   Show this help message.
+  -V, --version Show the version number.
 
 Examples:
-  ff rohit              # Creates directory: rohit
-  ff rohit/main.tf      # Creates directory: rohit, and file: main.tf
-  ff rohit/tom          # Creates nested directories: rohit/tom
-  ff a.txt b/c/d.json   # Handles multiple paths in one go
+  ff rohit                    # Creates directory: rohit
+  ff rohit/main.tf            # Creates directory: rohit, then file: main.tf
+  ff rohit/tom                # Creates nested directories: rohit/tom
+  ff a.txt b/c/d.json        # Handles multiple paths in one go
+  ff --file config/.env      # Creates .env as a file
+  ff --dir build/output      # Creates build/output as a directory
 HELP
+}
+
+is_probably_file() {
+  local path="$1"
+  local name="${path##*/}"
+
+  [[ -z "$name" || "$name" == "." || "$name" == ".." ]] && return 1
+
+  if [[ "$name" == *.* ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+create_path() {
+  local target="$1"
+  local forced_type="${2:-}"
+  local is_file=false
+
+  if [[ "$forced_type" == "file" ]]; then
+    is_file=true
+  elif [[ "$forced_type" == "dir" ]]; then
+    is_file=false
+  elif is_probably_file "$target"; then
+    is_file=true
+  fi
+
+  if [[ "$is_file" == true ]]; then
+    local dir_path="${target%/*}"
+    if [[ "$dir_path" != "$target" ]]; then
+      mkdir -p -- "$dir_path"
+    fi
+    touch -- "$target"
+    printf '[FILE CREATED] %s\n' "$(colorize_path "$target" file)"
+    return
+  fi
+
+  mkdir -p -- "$target"
+  printf '[FOLDER CREATED] %s\n' "$(colorize_path "$target" dir)"
+}
+
+supports_color() {
+  [[ "${COLOR_ENABLED:-true}" == true ]] || return 1
+  [[ -n "${NO_COLOR:-}" ]] && return 1
+  [[ "${TERM:-}" != dumb ]] || return 1
+
+  return 0
+}
+
+colorize() {
+  local text="$1"
+  local code="$2"
+
+  if supports_color; then
+    printf '\033[%sm%s\033[0m' "$code" "$text"
+  else
+    printf '%s' "$text"
+  fi
+}
+
+colorize_path() {
+  local path="$1"
+  local type="$2"
+  local parent=""
+  local name=""
+
+  if ! supports_color; then
+    printf '%s' "$path"
+    return
+  fi
+
+  if [[ "$type" == "file" ]]; then
+    if [[ "$path" == */* ]]; then
+      parent="${path%/*}/"
+      name="${path##*/}"
+      printf '%s%s' "$(colorize "$parent" "34")" "$(colorize "$name" "33")"
+    else
+      colorize "$path" "33"
+    fi
+  elif [[ "$path" == */* ]]; then
+    colorize "$path" "34"
+  else
+    colorize "$path" "32"
+  fi
 }
 
 if [ $# -eq 0 ]; then
   show_help
   exit 1
+fi
+
+forced_type=""
+COLOR_ENABLED=false
+if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
+  COLOR_ENABLED=true
 fi
 
 for target in "$@"; do
@@ -29,20 +135,29 @@ for target in "$@"; do
       show_help
       exit 0
       ;;
+    -V|--version)
+      echo "ff $VERSION"
+      exit 0
+      ;;
+    --dir)
+      forced_type="dir"
+      continue
+      ;;
+    --file)
+      forced_type="file"
+      continue
+      ;;
+    --no-color)
+      COLOR_ENABLED=false
+      continue
+      ;;
+    --)
+      forced_type=""
+      continue
+      ;;
     *)
-      last_part="${target##*/}"
-
-      if [[ "$last_part" =~ \.[a-zA-Z0-9_-]+$ ]]; then
-        dir_path="${target%/*}"
-        if [ "$dir_path" != "$target" ]; then
-          mkdir -p "$dir_path"
-        fi
-        touch "$target"
-        echo "[FILE CREATED]      $target"
-      else
-        mkdir -p "$target"
-        echo "[FOLDER CREATED]    $target"
-      fi
+      create_path "$target" "$forced_type"
+      forced_type=""
       ;;
   esac
 done
