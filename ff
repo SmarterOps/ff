@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+show_help() {
+  cat << 'HELP'
+ff - Fast File and Directory Creator
+
+Usage:
+  ff <path> [path2 ...]
+  ff -h | --help
+
+Examples:
+  ff rohit              # Creates directory: rohit
+  ff rohit/main.tf      # Creates directory: rohit, and file: main.tf
+  ff rohit/tom          # Creates nested directories: rohit/tom
+  ff a.txt b/c/d.json   # Handles multiple paths in one go
+HELP
+}
+
+if [ $# -eq 0 ]; then
+  show_help
+  exit 1
+fi
+
+for target in "$@"; do
+  case "$target" in
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    *)
+      last_part="${target##*/}"
+
+      if [[ "$last_part" =~ \.[a-zA-Z0-9_-]+$ ]]; then
+        dir_path="${target%/*}"
+        if [ "$dir_path" != "$target" ]; then
+          mkdir -p "$dir_path"
+        fi
+        touch "$target"
+        echo "[FILE CREATED]      $target"
+      else
+        mkdir -p "$target"
+        echo "[FOLDER CREATED]    $target"
+      fi
+      ;;
+  esac
+done
