@@ -53,7 +53,9 @@ bash install.sh
 ```
 
 The installer uses `/usr/local/bin` when writable and falls back to
-`$HOME/.local/bin`. To choose an install directory explicitly:
+`$HOME/.local/bin`. It uses `curl` or `wget` if it needs to fetch the script
+from GitHub, and validates the script before replacing an existing install.
+To choose an install directory explicitly:
 
 ```bash
 FF_INSTALL_DIR="$HOME/.local/bin" bash install.sh
@@ -69,16 +71,18 @@ ff a.txt b/c/d.json
 ```
 
 By default, a final path component containing a dot is treated as a file name;
-otherwise it is treated as a directory. Use `--file` or `--dir` to override
-that heuristic:
+otherwise it is treated as a directory. Use `--file PATH` or `--dir PATH` to
+override that heuristic:
 
 ```bash
 ff --dir release.v1
 ff --file .env
 ```
 
-Each type option applies to the next path only. Paths with spaces should be
-quoted, for example `ff "my project/notes.txt"`.
+Each type option takes exactly one path. Use `--` before paths that begin with
+a hyphen, for example `ff -- --draft.txt`. Paths with spaces should be quoted,
+for example `ff "my project/notes.txt"`. Existing files and directories are
+left unchanged and reported as already existing.
 
 ## Output colors
 
@@ -111,6 +115,8 @@ a change, check shell syntax with:
 
 ```bash
 bash -n ff install.sh
+bash tests/test_ff.sh
+bash tests/test_install.sh
 ```
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the contribution guidelines.

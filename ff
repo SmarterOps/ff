@@ -17,19 +17,19 @@ Usage:
   ff -V | --version
 
 Options:
-  --dir        Force the next argument to be treated as a directory.
-  --file       Force the next argument to be treated as a file.
+  --dir PATH   Create PATH as a directory.
+  --file PATH  Create PATH as a file.
   --no-color   Disable colored output.
   -h, --help   Show this help message.
   -V, --version Show the version number.
 
 Examples:
-  ff rohit                    # Creates directory: rohit
-  ff rohit/main.tf            # Creates directory: rohit, then file: main.tf
-  ff rohit/tom                # Creates nested directories: rohit/tom
-  ff a.txt b/c/d.json        # Handles multiple paths in one go
-  ff --file config/.env      # Creates .env as a file
-  ff --dir build/output      # Creates build/output as a directory
+  ff my-app/src my-app/tests
+                              # Creates project directories
+  ff my-app/src/main.js my-app/package.json my-app/README.md
+                              # Creates project files and their parent folders
+  ff --dir my-app/config.v2   # Creates a dotted directory name
+  ff --file my-app/.env       # Creates a project config file
 HELP
 }
 
@@ -51,6 +51,11 @@ create_path() {
   local forced_type="${2:-}"
   local is_file=false
 
+  if [[ -z "$target" ]]; then
+    echo "ff: path must not be empty." >&2
+    return 2
+  fi
+
   if [[ "$forced_type" == "file" ]]; then
     is_file=true
   elif [[ "$forced_type" == "dir" ]]; then
@@ -60,12 +65,26 @@ create_path() {
   fi
 
   if [[ "$is_file" == true ]]; then
+    if [[ -d "$target" ]]; then
+      echo "[ALREADY EXISTS] $target (directory)"
+      return
+    fi
+    if [[ -e "$target" || -L "$target" ]]; then
+      echo "[ALREADY EXISTS] $target"
+      return
+    fi
+
     local dir_path="${target%/*}"
     if [[ "$dir_path" != "$target" ]]; then
       mkdir -p -- "$dir_path"
     fi
     touch -- "$target"
     printf '[FILE CREATED] %s\n' "$(colorize_path "$target" file)"
+    return
+  fi
+
+  if [[ -d "$target" ]]; then
+    echo "[ALREADY EXISTS] $target (directory)"
     return
   fi
 
@@ -118,19 +137,30 @@ colorize_path() {
   fi
 }
 
-if [ $# -eq 0 ]; then
-  show_help
-  exit 1
-fi
+is_option() {
+  case "$1" in
+    -h|--help|-V|--version|--dir|--file|--no-color|--)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
 
-forced_type=""
 COLOR_ENABLED=false
 if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
   COLOR_ENABLED=true
 fi
+for argument in "$@"; do
+  if [[ "$argument" == "--no-color" ]]; then
+    COLOR_ENABLED=false
+  fi
+done
 
-for target in "$@"; do
-  case "$target" in
+paths_seen=0
+while (($#)); do
+  case "$1" in
     -h|--help)
       show_help
       exit 0
@@ -140,24 +170,45 @@ for target in "$@"; do
       exit 0
       ;;
     --dir)
-      forced_type="dir"
-      continue
+      if (($# < 2)) || is_option "$2"; then
+        echo "ff: --dir requires a path." >&2
+        exit 2
+      fi
+      create_path "$2" "dir"
+      paths_seen=$((paths_seen + 1))
+      shift 2
       ;;
     --file)
-      forced_type="file"
-      continue
+      if (($# < 2)) || is_option "$2"; then
+        echo "ff: --file requires a path." >&2
+        exit 2
+      fi
+      create_path "$2" "file"
+      paths_seen=$((paths_seen + 1))
+      shift 2
       ;;
     --no-color)
       COLOR_ENABLED=false
-      continue
+      shift
       ;;
     --)
-      forced_type=""
-      continue
+      shift
+      while (($#)); do
+        create_path "$1"
+        paths_seen=$((paths_seen + 1))
+        shift
+      done
       ;;
     *)
-      create_path "$target" "$forced_type"
-      forced_type=""
+      create_path "$1"
+      paths_seen=$((paths_seen + 1))
+      shift
       ;;
   esac
 done
+
+if ((paths_seen == 0)); then
+  echo "ff: provide at least one path." >&2
+  show_help >&2
+  exit 2
+fi

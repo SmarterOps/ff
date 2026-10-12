@@ -18,10 +18,10 @@ Do not include passwords, tokens, or other private information.
 1. Fork the repository and create a branch for your change.
 2. Keep the change focused and update the README when user-facing behavior
    changes.
-3. Check Bash syntax:
+3. Run the Bash syntax checks and automated tests:
 
    ```bash
-   bash -n ff install.sh
+   make test
    ```
 
 4. Test the affected behavior manually in a temporary directory.
