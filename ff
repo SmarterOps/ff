@@ -12,6 +12,7 @@ Usage:
   ff [options] <path> [path2 ...]
   ff --dir <path>
   ff --file <path>
+  ff --color <path>
   ff --no-color <path>
   ff -h | --help
   ff -V | --version
@@ -19,17 +20,23 @@ Usage:
 Options:
   --dir PATH   Create PATH as a directory.
   --file PATH  Create PATH as a file.
+  --color      Force colored output when supported.
   --no-color   Disable colored output.
   -h, --help   Show this help message.
   -V, --version Show the version number.
 
 Examples:
-  ff my-app/src my-app/tests
-                              # Creates project directories
-  ff my-app/src/main.js my-app/package.json my-app/README.md
-                              # Creates project files and their parent folders
-  ff --dir my-app/config.v2   # Creates a dotted directory name
-  ff --file my-app/.env       # Creates a project config file
+  Create project directories:
+    ff my-app/src my-app/tests
+
+  Create files and their parent directories:
+    ff my-app/src/main.js my-app/package.json my-app/README.md
+
+  Create a directory with a dotted name:
+    ff --dir my-app/config.v2
+
+  Create a configuration file:
+    ff --file my-app/.env
 HELP
 }
 
@@ -139,7 +146,7 @@ colorize_path() {
 
 is_option() {
   case "$1" in
-    -h|--help|-V|--version|--dir|--file|--no-color|--)
+    -h|--help|-V|--version|--dir|--file|--color|--no-color|--)
       return 0
       ;;
     *)
@@ -153,9 +160,10 @@ if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
   COLOR_ENABLED=true
 fi
 for argument in "$@"; do
-  if [[ "$argument" == "--no-color" ]]; then
-    COLOR_ENABLED=false
-  fi
+  case "$argument" in
+    --color) COLOR_ENABLED=true ;;
+    --no-color) COLOR_ENABLED=false ;;
+  esac
 done
 
 paths_seen=0
@@ -189,6 +197,10 @@ while (($#)); do
       ;;
     --no-color)
       COLOR_ENABLED=false
+      shift
+      ;;
+    --color)
+      COLOR_ENABLED=true
       shift
       ;;
     --)

@@ -84,7 +84,14 @@ On an interactive color-capable terminal, single-level directories are green,
 nested directory paths are blue, and file names are yellow. For a file inside
 a directory, the parent path is blue and the file name is yellow. Color is
 disabled when output is redirected, `TERM=dumb`, or the `NO_COLOR` environment
-variable is set. To disable it for a command:
+variable is set. To force colored output when stdout is redirected, use
+`--color` (unless `TERM=dumb` or `NO_COLOR` is set):
+
+```bash
+ff --color project/main.tf
+```
+
+To disable color for a command:
 
 ```bash
 ff --no-color project/main.tf

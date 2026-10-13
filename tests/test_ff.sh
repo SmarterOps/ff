@@ -73,6 +73,19 @@ fi
 "$FF" project/no-color.txt --no-color >/dev/null
 assert_exists "project/no-color.txt"
 
+output="$(TERM=xterm NO_COLOR= "$FF" --color color-dir)"
+assert_contains "$output" "[FOLDER CREATED]"
+[[ "$output" == *$'\033['* ]] || fail "--color should emit ANSI color codes"
+assert_exists "color-dir"
+
+output="$(TERM=xterm NO_COLOR= "$FF" --color --no-color plain-dir)"
+[[ "$output" != *$'\033['* ]] || fail "--no-color should disable --color"
+assert_exists "plain-dir"
+
+output="$(TERM=xterm NO_COLOR=1 "$FF" --color no-color-dir)"
+[[ "$output" != *$'\033['* ]] || fail "--color should respect NO_COLOR"
+assert_exists "no-color-dir"
+
 "$FF" -- --draft.txt >/dev/null
 assert_exists "--draft.txt"
 
