@@ -13,38 +13,32 @@ quickly. It supports Linux, macOS, WSL, and Windows environments with Bash
 
 ## Install
 
-### Download with curl
+### Quick install (Linux, macOS, WSL, or Git Bash)
 
 ```bash
-mkdir -p "$HOME/.local/bin"
-curl -fsSL https://raw.githubusercontent.com/SmarterOps/ff/main/ff \
-  -o "$HOME/.local/bin/ff"
-chmod +x "$HOME/.local/bin/ff"
+curl -fsSL https://raw.githubusercontent.com/SmarterOps/ff/main/install.sh | bash
 ```
 
-### Download with wget
+If `curl` is not installed, use `wget`:
 
 ```bash
-mkdir -p "$HOME/.local/bin"
-wget -O "$HOME/.local/bin/ff" \
-  https://raw.githubusercontent.com/SmarterOps/ff/main/ff
-chmod +x "$HOME/.local/bin/ff"
+wget -qO- https://raw.githubusercontent.com/SmarterOps/ff/main/install.sh | bash
 ```
 
-Make sure `$HOME/.local/bin` is on your `PATH`. For the current Bash session:
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-To add it permanently, put that line in `~/.bashrc` (Bash) or `~/.zshrc`
-(Zsh), then open a new terminal. Verify the installation:
+The installer puts `ff` in a system-wide command directory when possible. If
+that is not writable, it installs to `$HOME/.local/bin` and adds that directory
+to your Bash or Zsh startup files. After installation, open a new terminal and
+run:
 
 ```bash
 ff --help
 ```
 
-Alternatively, clone the repository and run its installer:
+If you want to use `ff` in the terminal where you installed it, run the PATH
+command printed by the installer. The installer requires `curl` or `wget`; it
+does not require cloning the repository.
+
+To install from a local clone instead:
 
 ```bash
 git clone https://github.com/SmarterOps/ff.git

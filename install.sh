@@ -13,6 +13,35 @@ if ! mkdir -p "$INSTALL_DIR" 2>/dev/null || [[ ! -w "$INSTALL_DIR" ]]; then
   mkdir -p "$INSTALL_DIR"
 fi
 
+configure_local_path() {
+  local marker="# ff: add user install directory to PATH"
+  local startup_files=()
+
+  case "${SHELL##*/}" in
+    bash)
+      startup_files=("$HOME/.profile" "$HOME/.bashrc")
+      ;;
+    zsh)
+      startup_files=("$HOME/.zprofile" "$HOME/.zshrc")
+      ;;
+    *)
+      startup_files=("$HOME/.profile")
+      ;;
+  esac
+
+  for startup_file in "${startup_files[@]}"; do
+    if [[ ! -f "$startup_file" ]] || ! grep -Fq -- "$marker" "$startup_file"; then
+      {
+        printf '\n%s\n' "$marker"
+        printf '%s\n' 'case ":$PATH:" in'
+        printf '%s\n' '  *":$HOME/.local/bin:"*) ;;'
+        printf '%s\n' '  *) export PATH="$HOME/.local/bin:$PATH" ;;'
+        printf '%s\n' 'esac'
+      } >> "$startup_file"
+    fi
+  done
+}
+
 TEMP_FILE="$(mktemp "$INSTALL_DIR/.ff.XXXXXX")"
 trap 'rm -f -- "$TEMP_FILE"' EXIT
 
@@ -41,6 +70,15 @@ mv -f -- "$TEMP_FILE" "$INSTALL_DIR/ff"
 trap - EXIT
 
 echo "==> Installed ff to: $INSTALL_DIR/ff"
+if [[ "$INSTALL_DIR" == "$HOME/.local/bin" ]]; then
+  configure_local_path
+fi
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
-  echo "==> Add $INSTALL_DIR to your PATH to run ff from any directory."
+  if [[ "$INSTALL_DIR" == "$HOME/.local/bin" ]]; then
+    echo "==> Added $INSTALL_DIR to your shell startup files."
+    echo "==> Open a new terminal to use 'ff', or run:"
+    echo "    export PATH=\"$INSTALL_DIR:\$PATH\""
+  else
+    echo "==> Add $INSTALL_DIR to your PATH to run ff from any directory."
+  fi
 fi

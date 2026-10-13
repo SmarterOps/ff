@@ -70,6 +70,31 @@ WGET_INSTALL="$TEST_DIR/wget-bin"
 [[ -x "$WGET_INSTALL/ff" ]] || fail "wget remote install did not create an executable"
 "$WGET_INSTALL/ff" --version >/dev/null
 
+LOCAL_HOME="$TEST_DIR/local-home"
+LOCAL_PATH_INSTALL="$LOCAL_HOME/.local/bin"
+mkdir -p "$LOCAL_HOME"
+(
+  HOME="$LOCAL_HOME" \
+  SHELL="/bin/bash" \
+  FF_INSTALL_DIR="$LOCAL_PATH_INSTALL" \
+    bash "$PACKAGE_DIR/install.sh"
+) >/dev/null
+[[ -x "$LOCAL_PATH_INSTALL/ff" ]] || fail "local user install did not create an executable"
+grep -Fq '# ff: add user install directory to PATH' "$LOCAL_HOME/.profile" ||
+  fail "local user install did not configure the login shell PATH"
+grep -Fq '# ff: add user install directory to PATH' "$LOCAL_HOME/.bashrc" ||
+  fail "local user install did not configure the interactive Bash PATH"
+(
+  HOME="$LOCAL_HOME" \
+  SHELL="/bin/bash" \
+  FF_INSTALL_DIR="$LOCAL_PATH_INSTALL" \
+    bash "$PACKAGE_DIR/install.sh"
+) >/dev/null
+[[ "$(grep -Fc '# ff: add user install directory to PATH' "$LOCAL_HOME/.profile")" == 1 ]] ||
+  fail "local user install duplicated the login shell PATH configuration"
+[[ "$(grep -Fc '# ff: add user install directory to PATH' "$LOCAL_HOME/.bashrc")" == 1 ]] ||
+  fail "local user install duplicated the interactive Bash PATH configuration"
+
 PRESERVE_INSTALL="$TEST_DIR/preserve-bin"
 mkdir -p "$PRESERVE_INSTALL"
 cat > "$PRESERVE_INSTALL/ff" <<'EXISTING'
