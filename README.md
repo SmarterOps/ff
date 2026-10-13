@@ -99,14 +99,19 @@ ff --no-color project/main.tf
 
 ## Uninstall
 
-Remove the installed `ff` file from the directory where it was installed. For
+Find where `ff` is installed:
+
+```bash
+command -v ff
+```
+
+The installer uses `/usr/local/bin` when writable and otherwise falls back to
+`$HOME/.local/bin`. Remove the path printed above (use `sudo` if needed), for
 example:
 
 ```bash
-rm "$HOME/.local/bin/ff"
+sudo rm /usr/local/bin/ff
 ```
-
-If installed to a different location, remove that location's `ff` executable.
 
 ## Contributing
 
